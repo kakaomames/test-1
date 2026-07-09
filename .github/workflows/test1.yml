@@ -108,40 +108,48 @@ jobs:
         # 🛠️ パート2: メディアツールおよび各種デコンパイラの配置
         # =========================================================
 
-        # --- ⑤ ffmpeg / ffprobe ポータブルバイナリ取得 (遅延トラップ完全破壊・GitHub最優先ルート) ---
+        # --- ⑤ ffmpeg / ffprobe ポータブルバイナリ取得 (低速ダウンロード完全粘着ルート) ---
         echo "[missionLog] [ACTION] ffmpeg スタティックバイナリの強襲奪還作戦を開始します。"
         FF_SUCCESS=false
 
-        # 【超安定ルート1】 GitHubの超高帯域公式ミラー・リリースから爆速で引き抜く（メイン作戦）
-        echo "[missionLog] [ACTION] ルート1: GitHub上の超安定スタティックリリースから奪還を試みます。"
-        if curl -L -k --max-time 20 -o ffmpeg-release-amd64-static.tar.xz "https://github.com/BuriKani/ffmpeg-static-binaries/releases/download/v6.0/ffmpeg-release-amd64-static.tar.xz" || \
-           curl -L -k --max-time 20 -o ffmpeg-release-amd64-static.tar.xz "https://github.com/GyanD/codexffmpeg/releases/download/6.0/ffmpeg-6.0-essentials_build.tar.xz"; then
+        # 【超粘着作戦ルート1】 johnvansickle公式 (接続判定15秒、データ転送は最大5分間粘る)
+        echo "[missionLog] [ACTION] ルート1: johnvansickle公式へブラウザ偽装を施し、低速でも最後までダウンロードを維持します。"
+        if curl -L -k --connect-timeout 15 --max-time 300 -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+          -o ffmpeg-release-amd64-static.tar.xz "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"; then
           
           FILE_SIZE=$(stat -c%s "ffmpeg-release-amd64-static.tar.xz" 2>/dev/null || echo 0)
           if [ "$FILE_SIZE" -gt 1048576 ]; then
-            echo "[missionLog] [STATUS] ルート1成功！強襲ダウンロード完了（サイズ: $FILE_SIZE バイト）。"
+            echo "[missionLog] [STATUS] ルート1大成功！正常アーカイブの取得を完了しました（サイズ: $FILE_SIZE バイト）。"
             FF_SUCCESS=true
           fi
         fi
 
-        # 【ハングアップ対策ルート2】 johnvansickle公式 (10秒制限付きでハングアップを即座に蹴る)
+        # 【バックアップルート2】 GyanDの安定自動ビルドミラー（URL構造最適化版）
         if [ "$FF_SUCCESS" = false ]; then
-          echo "[missionLog] [WARNING] ルート1が不発。ルート2: johnvansickleへ最大10秒制限を課してブラウザ偽装アタックを敢行。"
+          echo "[missionLog] [WARNING] ルート1が不発。ルート2: GyanD公式GitHubリリースへスイッチします。"
           rm -f ffmpeg-release-amd64-static.tar.xz
-          
-          curl -L -k --max-time 10 -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-            -o ffmpeg-release-amd64-static.tar.xz "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
-          
-          FILE_SIZE=$(stat -c%s "ffmpeg-release-amd64-static.tar.xz" 2>/dev/null || echo 0)
-          if [ "$FILE_SIZE" -gt 1048576 ]; then
-            echo "[missionLog] [STATUS] ルート2成功。正常アーカイブ確認。"
-            FF_SUCCESS=true
+          if curl -L -k --connect-timeout 15 --max-time 300 -o ffmpeg-release-amd64-static.tar.xz "https://github.com/GyanD/codexffmpeg/releases/download/6.0/ffmpeg-6.0-essentials_build.tar.xz"; then
+            FILE_SIZE=$(stat -c%s "ffmpeg-release-amd64-static.tar.xz" 2>/dev/null || echo 0)
+            if [ "$FILE_SIZE" -gt 1048576 ]; then
+              echo "[missionLog] [STATUS] ルート2成功！ミラーからのダウンロードを確認（サイズ: $FILE_SIZE バイト）。"
+              FF_SUCCESS=true
+            fi
           fi
         fi
 
-        # 【最終防衛ラインルート3】 ネットワークが全面崩壊した時のコンテナローカル直接抽出
+        # 【救済ルート3】 FFmpeg公式 MasterソースZIPルート
         if [ "$FF_SUCCESS" = false ]; then
-          echo "[missionLog] [WARNING] 全ネットワークルートが遮断またはハングアップしました。最終防衛ライン: ホスト直接抽出を実行。"
+          echo "[missionLog] [WARNING] バイナリ取得失敗。ルート3: FFmpeg公式MasterソースZIPからのインポートルートを展開。"
+          rm -f ffmpeg-release-amd64-static.tar.xz
+          mkdir -p "$TOOL_DIR/ffmpeg"
+          if curl -L -k --connect-timeout 15 --max-time 180 -o ffmpeg-master.zip "https://github.com/FFmpeg/FFmpeg/archive/refs/heads/master.zip"; then
+            echo "[missionLog] [STATUS] 公式ソースZIPのインポータ完了。ビルド依存関係確保のためホスト連携を行います。"
+          fi
+        fi
+
+        # 【最終防衛ラインルート4】 ホストシステム内蔵アセットからのポータブル直接抽出
+        if [ "$FF_SUCCESS" = false -a ! -f "$TOOL_DIR/ffmpeg/ffmpeg" ]; then
+          echo "[missionLog] [WARNING] 全ネットワークルートが遮断されました。最終手段：ホストコンテナ直接抽出を発動。"
           sudo apt-get update && sudo apt-get install -y ffmpeg
           mkdir -p "$TOOL_DIR/ffmpeg"
           cp /usr/bin/ffmpeg "$TOOL_DIR/ffmpeg/ffmpeg"
@@ -149,9 +157,11 @@ jobs:
           chmod +x "$TOOL_DIR/ffmpeg/ffmpeg" "$TOOL_DIR/ffmpeg/ffprobe"
           FF_SUCCESS=true
           echo "[missionLog] [STATUS] 最終手段：内蔵兵装からのffmpeg抽出配備完了。"
-        else
-          # ルート1または2で正常にダウンロードできた場合の展開
-          echo "[missionLog] [ACTION] ダウンロードしたアーカイブを展開中..."
+        fi
+
+        # ルート1または2でスタティックアーカイブを正常奪還できていた場合の展開
+        if [ "$FF_SUCCESS" = true -a -f "ffmpeg-release-amd64-static.tar.xz" ]; then
+          echo "[missionLog] [ACTION] 奪還したアーカイブを展開中..."
           tar -xf ffmpeg-release-amd64-static.tar.xz
           
           # ディレクトリ名の揺れを完全吸収する柔軟マッピング
@@ -264,7 +274,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    # 6. リポジトリ自タイムのインデックス変更を確定させてから、最後に `git push`
+    # 6. リポジトリ自体のインデックス変更を確定させてから、最後に `git push`
     - name: リポジトリの同期および Git Push
       run: |
         echo "[missionLog] [ACTION] 最終フェーズ：完全体（runtimes & tools）同期の履歴をGitリポジトリへPushします。"
