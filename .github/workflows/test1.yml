@@ -109,8 +109,7 @@ jobs:
         # =========================================================
 
         # --- ⑤ ffmpeg / ffprobe のスタティック(ポータブル)バイナリ取得 ---
-        echo "[missionLog] [ACTION] ffmpeg スタティックバイナリの取得を開始します（SSLチェック無効化付き）。"
-        # aria2cでの取得をトライ（証明書検証をバイパス）
+        echo "[missionLog] [ACTION] ffmpeg スタティックバイナリの取得を開始します。"
         if ! aria2c -x 16 -s 16 --check-certificate=false "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"; then
           echo "[missionLog] [WARNING] aria2cでのffmpeg取得に失敗しました。curlによるバックアップルートを試みます。"
           curl -L -k -O "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
@@ -137,10 +136,20 @@ jobs:
 
         # --- ⑦ jadx (Java/Androidデコンパイラ) の取得 ---
         echo "[missionLog] [ACTION] jadx 最新バイナリパッケージを取得します。"
-        JADX_VERSION=$(curl -s -k https://api.github.com/repos/skylot/jadx/releases/latest | grep -Po '"tag_name": "\K[^"]*')
-        aria2c -x 16 -s 16 --check-certificate=false "https://github.com/skylot/jadx/releases/download/${JADX_VERSION}/jadx-${JADX_VERSION}.zip"
+        # 最新のタグ名（例: v1.5.5）を取得
+        JADX_RAW_VERSION=$(curl -s -k https://api.github.com/repos/skylot/jadx/releases/latest | grep -Po '"tag_name": "\K[^"]*')
+        # jadxのZIPアセット名から「v」を排除して、純粋なバージョン数値のみにする (例: v1.5.5 -> 1.5.5)
+        JADX_CLEAN_VERSION="${JADX_RAW_VERSION#v}"
+        
+        echo "[missionLog] [STATUS] 解析されたjadxのクリーンバージョンは [ ${JADX_CLEAN_VERSION} ] です。"
+        
+        if ! aria2c -x 16 -s 16 --check-certificate=false "https://github.com/skylot/jadx/releases/download/${JADX_RAW_VERSION}/jadx-${JADX_CLEAN_VERSION}.zip"; then
+          echo "[missionLog] [WARNING] aria2cでのjadx取得に失敗。curlによる強制突破を敢行します。"
+          curl -L -k -O "https://github.com/skylot/jadx/releases/download/${JADX_RAW_VERSION}/jadx-${JADX_CLEAN_VERSION}.zip"
+        fi
+        
         mkdir -p "$TOOL_DIR/jadx"
-        unzip -q "jadx-${JADX_VERSION}.zip" -d "$TOOL_DIR/jadx"
+        unzip -q "jadx-${JADX_CLEAN_VERSION}.zip" -d "$TOOL_DIR/jadx"
         chmod +x "$TOOL_DIR/jadx/bin/jadx"
 
         # --- ⑧ ilspycmd (.NETデコンパイラ) のビルド・配置 ---
