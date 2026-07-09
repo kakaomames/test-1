@@ -96,9 +96,13 @@ jobs:
         mkdir -p "$RUNTIME_DIR/emsdk"
         cp -r emsdk-main/* "$RUNTIME_DIR/emsdk/"
         cd "$RUNTIME_DIR/emsdk"
-        chmod +x ./emsdk
-        "$RUNTIME_DIR/python/bin/python3" ./emsdk install latest
-        "$RUNTIME_DIR/python/bin/python3" ./emsdk activate latest
+        
+        # シェルスクリプト経由ではなく、同梱の emsdk.py をポータブルPythonで直接叩く布陣に変更
+        chmod +x ./emsdk.py
+        echo "[missionLog] [ACTION] emsdk.py を用いて latest のインストールを実行します。"
+        "$RUNTIME_DIR/python/bin/python3" ./emsdk.py install latest
+        echo "[missionLog] [ACTION] emsdk.py を用いて latest の有効化を実行します。"
+        "$RUNTIME_DIR/python/bin/python3" ./emsdk.py activate latest
         cd $HOME/factory_tmp
 
         # =========================================================
@@ -181,7 +185,7 @@ jobs:
           - Node.js (v18.16.0)
           - Java OpenJDK (17)
           - Python Standalone (3.10.11)
-          - Emscripten / emcc (Latest)
+          - Emscripten / emcc (Latest via emsdk.py)
           
           **Packed Decouplers & Media Tools (Standalone/Portable):**
           - ffmpeg / ffprobe (Static Build)
@@ -218,3 +222,4 @@ jobs:
           git push origin main
           echo "[missionLog] [STATUS] 任務完全完了！ffmpegを含む全ツールと全ランタイムが、ReleaseおよびGitに完全配備されたぞ！"
         fi
+        
